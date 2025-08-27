@@ -1,297 +1,141 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Fandub Portfolios</title>
-  <!-- Tailwind CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- React y ReactDOM desde CDN -->
-  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-  <!-- Framer Motion -->
-  <script src="https://unpkg.com/framer-motion/dist/framer-motion.umd.js"></script>
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- Google Font Poppins -->
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fandubbers Portfolio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    :root { --font-sans: 'Poppins', ui-sans-serif, system-ui; }
-    body { font-family: var(--font-sans); }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "Poppins", sans-serif;
+    }
+    body {
+      background: linear-gradient(135deg, #1e1e2f, #2d2d44);
+      color: white;
+      padding: 20px;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    header h1 {
+      font-size: 2rem;
+    }
+    .search-box {
+      display: flex;
+      justify-content: center;
+      margin: 15px 0;
+    }
+    .search-box input {
+      padding: 10px;
+      width: 300px;
+      border-radius: 8px;
+      border: none;
+    }
+    .tags {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .tag {
+      background: #444;
+      padding: 6px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .tag:hover {
+      background: #666;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: #2d2d44;
+      border-radius: 12px;
+      padding: 15px;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      transition: transform 0.2s;
+    }
+    .card:hover {
+      transform: scale(1.05);
+    }
+    .card img {
+      width: 100%;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
   </style>
 </head>
-<body class="bg-white text-gray-900">
-  <div id="root"></div>
+<body>
+  <header>
+    <h1>🎙️ Fandubbers Portfolio</h1>
+    <div class="search-box">
+      <input type="text" id="search" placeholder="Buscar fandubber...">
+    </div>
+    <div class="tags">
+      <span class="tag" onclick="filterTag('todos')">Todos</span>
+      <span class="tag" onclick="filterTag('comedia')">Comedia</span>
+      <span class="tag" onclick="filterTag('acción')">Acción</span>
+      <span class="tag" onclick="filterTag('drama')">Drama</span>
+    </div>
+  </header>
 
-  <script type="text/babel">
-
-    const { useState, useEffect, useMemo } = React;
-    const { motion } = window['framerMotion'];
-    const { ArrowRight, ArrowLeft, Search, Tag } = lucide;
-
-    // ------------------- Mock Data -------------------
-    const MOCK_DATA = [
-      {
-        slug: "lunaria-voice",
-        name: "Lunaria Voice",
-        avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=640&auto=format&fit=crop",
-        description: "Fandubber enfocada en anime dramático y narraciones inmersivas.",
-        tags: ["fandubber", "narrador", "español-latino"],
-        videos: ["https://www.youtube.com/embed/dQw4w9WgXcQ"]
-      },
-      {
-        slug: "aster-cover",
-        name: "Aster Cover",
-        avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=640&auto=format&fit=crop",
-        description: "Coverista con enfoque en openings y endings.",
-        tags: ["coverista", "canto", "jpop"],
-        videos: ["https://www.youtube.com/embed/ysz5S6PUM-U"]
-      },
-      {
-        slug: "echo-dubs",
-        name: "Echo Dubs",
-        avatar: "https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?q=80&w=640&auto=format&fit=crop",
-        description: "Fandubber versátil: comedia, acción y tragedia.",
-        tags: ["fandubber", "comedia", "acción"],
-        videos: ["https://www.youtube.com/embed/aqz-KE-bpKQ"]
-      }
-    ];
-
-    const allTags = Array.from(new Set(MOCK_DATA.flatMap((p) => p.tags))).sort();
-
-    // ------------------- Utilities -------------------
-    const cls = (...arr) => arr.filter(Boolean).join(" ");
-
-    function useHashRoute() {
-      const parse = () => {
-        const h = window.location.hash.replace(/^#/, "");
-        const path = h || "/";
-        const parts = path.split("/").filter(Boolean);
-        return { path, parts };
-      };
-      const [route, setRoute] = useState(parse());
-      useEffect(() => {
-        const onHash = () => setRoute(parse());
-        window.addEventListener("hashchange", onHash);
-        return () => window.removeEventListener("hashchange", onHash);
-      }, []);
-      return { route };
-    }
-
-    // ------------------- Components -------------------
-    const Container = ({ children, className = "" }) => (
-      <div className={cls("max-w-6xl mx-auto px-4", className)}>{children}</div>
-    );
-
-    const Badge = ({ children, active = false, onClick }) => (
-      <button
-        onClick={onClick}
-        className={cls(
-          "px-3 py-1 rounded-full text-sm border transition",
-          active
-            ? "bg-black text-white border-black"
-            : "bg-white text-gray-700 border-gray-200 hover:border-gray-300"
-        )}
-      >
-        <div className="flex items-center gap-1"><Tag size={14} />{children}</div>
-      </button>
-    );
-
-    const Card = ({ children, className = "", onClick }) => (
-      <motion.div
-        whileHover={{ y: -2 }}
-        transition={{ type: "spring", stiffness: 300, damping: 20 }}
-        onClick={onClick}
-        className={cls(
-          "rounded-2xl border border-gray-200 bg-white shadow-sm hover:shadow-md cursor-pointer",
-          className
-        )}
-      >
-        {children}
-      </motion.div>
-    );
-
-    const NavBar = () => (
-      <header className="sticky top-0 z-30 backdrop-blur bg-white/70 border-b border-gray-100">
-        <Container className="flex items-center justify-between py-3">
-          <a href="#/" className="font-semibold text-lg tracking-tight">Fandub Portfolios</a>
-          <nav className="flex items-center gap-2">
-            <a href="#/list" className="px-3 py-1.5 text-sm rounded-full border border-gray-200 hover:bg-gray-50">Lista</a>
-            <a href="#/" className="px-3 py-1.5 text-sm rounded-full border border-gray-200 hover:bg-gray-50">Inicio</a>
-            <a href="#/list" className="ml-2 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-black text-white text-sm">
-              Explorar <ArrowRight size={16} />
-            </a>
-          </nav>
-        </Container>
-      </header>
-    );
-
-    // ------------------- Views -------------------
-    const HomeView = () => (
-      <div className="relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-white via-white to-gray-50 -z-10" />
-        <Container className="py-16 md:py-24 text-center">
-          <h1 className="text-4xl md:text-6xl font-semibold tracking-tight">Registry & Portfolios for Fandubbers</h1>
-          <p className="mt-4 text-gray-600 max-w-2xl mx-auto">
-            Un registro ficticio y portafolio de fandubers y coveristas.
-          </p>
-          <div className="mt-8 flex items-center justify-center gap-3">
-            <a href="#/list" className="px-5 py-3 rounded-full bg-black text-white inline-flex items-center gap-2">
-              Ver lista <ArrowRight size={18} />
-            </a>
-            <a href="#/list" className="px-5 py-3 rounded-full border border-gray-200 hover:bg-gray-50">
-              Filtrar por etiquetas
-            </a>
-          </div>
-        </Container>
+  <main>
+    <div class="cards" id="cards">
+      <div class="card" data-tags="comedia">
+        <img src="https://via.placeholder.com/200x120" alt="fandubber">
+        <h3>Ana López</h3>
+        <p>Especialista en comedia</p>
       </div>
-    );
+      <div class="card" data-tags="acción">
+        <img src="https://via.placeholder.com/200x120" alt="fandubber">
+        <h3>Carlos Pérez</h3>
+        <p>Voces para acción y batallas</p>
+      </div>
+      <div class="card" data-tags="drama">
+        <img src="https://via.placeholder.com/200x120" alt="fandubber">
+        <h3>Lucía Gómez</h3>
+        <p>Interpretaciones dramáticas</p>
+      </div>
+      <div class="card" data-tags="comedia drama">
+        <img src="https://via.placeholder.com/200x120" alt="fandubber">
+        <h3>Mario Ruiz</h3>
+        <p>Versátil en comedia y drama</p>
+      </div>
+    </div>
+  </main>
 
-    const ListView = ({ profiles }) => {
-      const [query, setQuery] = useState("");
-      const [activeTags, setActiveTags] = useState([]);
+  <script>
+    const searchInput = document.getElementById("search");
+    const cards = document.querySelectorAll(".card");
 
-      const filtered = useMemo(() => {
-        const q = query.trim().toLowerCase();
-        return profiles.filter((p) => {
-          const matchesQuery = !q ||
-            p.name.toLowerCase().includes(q) ||
-            p.description.toLowerCase().includes(q) ||
-            p.tags.some((t) => t.toLowerCase().includes(q));
-          const matchesTags = activeTags.length === 0 || activeTags.every((t) => p.tags.includes(t));
-          return matchesQuery && matchesTags;
-        });
-      }, [profiles, query, activeTags]);
+    searchInput.addEventListener("input", function () {
+      const value = this.value.toLowerCase();
+      cards.forEach(card => {
+        const name = card.querySelector("h3").textContent.toLowerCase();
+        card.style.display = name.includes(value) ? "block" : "none";
+      });
+    });
 
-      const toggleTag = (t) => {
-        setActiveTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
-      };
-
-      return (
-        <Container className="py-10 md:py-14">
-          <div className="relative flex-1">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar..."
-              className="w-full rounded-full border border-gray-200 bg-white px-12 py-3 focus:outline-none focus:ring-2 focus:ring-black"
-            />
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          </div>
-
-          <div className="mt-5 flex flex-wrap gap-2">
-            {allTags.map((t) => (
-              <Badge key={t} active={activeTags.includes(t)} onClick={() => toggleTag(t)}>{t}</Badge>
-            ))}
-            {activeTags.length > 0 && (
-              <button className="ml-1 text-sm underline text-gray-600 hover:text-gray-900" onClick={() => setActiveTags([])}>
-                Limpiar filtros
-              </button>
-            )}
-          </div>
-
-          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map((p) => (
-              <Card key={p.slug} onClick={() => (window.location.hash = `#/profile/${p.slug}`)}>
-                <div className="p-4">
-                  <div className="flex items-center gap-4">
-                    <img src={p.avatar} alt={p.name} className="w-16 h-16 rounded-full object-cover border border-gray-200" />
-                    <div>
-                      <h3 className="font-semibold text-lg">{p.name}</h3>
-                      <div className="mt-1 flex flex-wrap gap-1.5">
-                        {p.tags.slice(0, 4).map((t) => (
-                          <span key={t} className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200">{t}</span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  <p className="mt-4 text-sm text-gray-600 line-clamp-3">{p.description}</p>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </Container>
-      );
-    };
-
-    const ProfileView = ({ profile }) => {
-      if (!profile) return (
-        <Container className="py-16 text-center">
-          <p className="text-gray-600">Perfil no encontrado.</p>
-          <a href="#/list" className="inline-flex items-center gap-2 mt-4 text-sm px-4 py-2 rounded-full border border-gray-200 hover:bg-gray-50">
-            <ArrowLeft size={16} /> Volver
-          </a>
-        </Container>
-      );
-
-      return (
-        <Container className="py-10 md:py-14">
-          <div className="flex items-start gap-6 flex-col md:flex-row">
-            <img src={profile.avatar} alt={profile.name} className="w-28 h-28 rounded-full object-cover border border-gray-200" />
-            <div className="flex-1">
-              <h2 className="text-2xl font-semibold">{profile.name}</h2>
-              <p className="mt-2 text-gray-700">{profile.description}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {profile.tags.map((t) => (
-                  <span key={t} className="text-xs px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 border border-gray-200">{t}</span>
-                ))}
-              </div>
-              <a href="#/list" className="inline-flex items-center gap-2 mt-5 text-sm px-4 py-2 rounded-full border border-gray-200 hover:bg-gray-50">
-                <ArrowLeft size={16} /> Volver a la lista
-              </a>
-            </div>
-          </div>
-
-          <section className="mt-10">
-            <h3 className="text-lg font-medium mb-4">Portafolio de videos</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {profile.videos.map((url, i) => (
-                <div key={i} className="aspect-video rounded-xl overflow-hidden border border-gray-200 bg-black">
-                  <iframe className="w-full h-full" src={url} frameBorder="0" allowFullScreen></iframe>
-                </div>
-              ))}
-            </div>
-          </section>
-        </Container>
-      );
-    };
-
-    // ------------------- App -------------------
-    function App() {
-      const { route } = useHashRoute();
-      const [page, setPage] = useState("home");
-
-      useEffect(() => {
-        const [first, second] = route.parts;
-        if (!first) setPage("home");
-        else if (first === "list") setPage("list");
-        else if (first === "profile" && second) setPage("profile");
-      }, [route]);
-
-      const currentProfile = useMemo(() => {
-        if (page !== "profile") return null;
-        const slug = route.parts[1];
-        return MOCK_DATA.find((p) => p.slug === slug);
-      }, [page, route.parts]);
-
-      return (
-        <div>
-          <NavBar />
-          {page === "home" && <HomeView />}
-          {page === "list" && <ListView profiles={MOCK_DATA} />}
-          {page === "profile" && <ProfileView profile={currentProfile} />}
-          <footer className="mt-16 border-t border-gray-100">
-            <Container className="py-8 text-sm text-gray-500 flex flex-col md:flex-row items-center justify-between gap-3">
-              <span>© {new Date().getFullYear()} Fandub Portfolios</span>
-              <span className="text-gray-400">Diseño inspirado en vgen.co • React + Tailwind</span>
-            </Container>
-          </footer>
-        </div>
-      );
+    function filterTag(tag) {
+      cards.forEach(card => {
+        if (tag === "todos") {
+          card.style.display = "block";
+        } else {
+          const tags = card.getAttribute("data-tags").split(" ");
+          card.style.display = tags.includes(tag) ? "block" : "none";
+        }
+      });
     }
-
-    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
-
   </script>
 </body>
 </html>
